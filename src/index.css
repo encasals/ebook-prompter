@@ -1,0 +1,180 @@
+@import "tailwindcss";
+
+/* Soft, eye-friendly color palette */
+:root {
+  --bg-primary: #faf9f7;
+  --bg-secondary: #f2f0ed;
+  --bg-tertiary: #e9e6e2;
+  --text-primary: #2c2c2c;
+  --text-secondary: #5a5a5a;
+  --text-muted: #b8b0a8;
+  --text-read: #c8c2ba;
+  --border-color: #ddd9d3;
+  --accent: #6b5d4d;
+  --reading-line-position: 40%;
+}
+
+/* Dark mode - warm dark theme, easy on eyes */
+.dark {
+  --bg-primary: #1a1918;
+  --bg-secondary: #242220;
+  --bg-tertiary: #2d2a28;
+  --text-primary: #ebe8e3;
+  --text-secondary: #a8a29a;
+  --text-muted: #6a645c;
+  --text-read: #4a453f;
+  --border-color: #3a3634;
+  --accent: #b8a890;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: 'Source Serif 4', 'Merriweather', Georgia, serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-optical-sizing: auto;
+}
+
+/* Title font - clean sans for modern look */
+.newspaper-title {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Headlines - readable serif */
+.newspaper-headline {
+  font-family: 'Source Serif 4', 'Merriweather', Georgia, serif;
+  font-weight: 600;
+}
+
+/* Body text - optimized for reading */
+.newspaper-body {
+  font-family: 'Source Serif 4', 'Merriweather', Georgia, serif;
+  font-weight: 400;
+}
+
+.dark body,
+.dark {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* Reading line indicator - hidden by default */
+.reading-line {
+  display: none;
+}
+
+/* Word styling for reading flow - clear contrast */
+.word-read {
+  color: var(--text-read);
+  transition: color 0.15s ease-out;
+}
+
+.word-unread {
+  color: var(--text-primary);
+  transition: color 0.15s ease-out;
+}
+
+/* Newspaper decorative elements */
+.newspaper-rule {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border-color), transparent);
+  margin: 1rem 0;
+}
+
+.newspaper-double-rule {
+  border: none;
+  height: 3px;
+  background: linear-gradient(180deg, 
+    var(--border-color) 0px, 
+    var(--border-color) 1px, 
+    transparent 1px, 
+    transparent 2px, 
+    var(--border-color) 2px, 
+    var(--border-color) 3px
+  );
+  margin: 1rem 0;
+}
+
+/* Custom scrollbar - subtle */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Drop cap for first letter - smaller on mobile */
+.drop-cap::first-letter {
+  font-family: 'Source Serif 4', 'Merriweather', Georgia, serif;
+  font-size: 3rem;
+  float: left;
+  line-height: 1;
+  padding-right: 0.4rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+@media (min-width: 640px) {
+  .drop-cap::first-letter {
+    font-size: 4rem;
+    padding-right: 0.5rem;
+  }
+}
+
+/* Smooth transitions */
+.transition-colors {
+  transition-property: color, background-color, border-color;
+  transition-timing-function: ease-out;
+  transition-duration: 150ms;
+}
+
+/* Mobile touch improvements */
+@media (max-width: 640px) {
+  button, select, input {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  select {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+}
+
+/* Safe area support for notched devices */
+@supports (padding: max(0px)) {
+  .safe-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  
+  .safe-top {
+    padding-top: max(0.5rem, env(safe-area-inset-top));
+  }
+}
