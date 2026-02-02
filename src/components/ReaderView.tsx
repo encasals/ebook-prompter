@@ -1,7 +1,15 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, MouseEvent } from 'react'
 import { useReaderStore } from '../store/useReaderStore'
 import WordRenderer, { getWordCount, getWordsWithPunctuation } from './WordRenderer'
 import HUD from './HUD'
+import type { PauseType } from '../types'
+
+type PauseMultipliersWithNone = {
+  long: number
+  medium: number
+  short: number
+  none: number
+}
 
 function ReaderView() {
   const {
@@ -17,7 +25,7 @@ function ReaderView() {
   } = useReaderStore()
   
   // Build pause multipliers with 'none' fallback
-  const PAUSE_MULTIPLIERS = useMemo(() => ({
+  const PAUSE_MULTIPLIERS: PauseMultipliersWithNone = useMemo(() => ({
     long: pauseMultipliers?.long ?? 2.0,
     medium: pauseMultipliers?.medium ?? 1.5,
     short: pauseMultipliers?.short ?? 1.2,
@@ -35,13 +43,13 @@ function ReaderView() {
   // Ref to track if chapter changed
   const prevChapterRef = useRef(currentChapterIndex)
   
-  const contentRef = useRef(null)
-  const scrollAnimationRef = useRef(null)
-  const lastTimeRef = useRef(0)
-  const accumulatedTimeRef = useRef(0)
-  const targetScrollRef = useRef(0)
-  const currentScrollRef = useRef(0)
-  const wakeLockRef = useRef(null)
+  const contentRef = useRef<HTMLElement>(null)
+  const scrollAnimationRef = useRef<number | null>(null)
+  const lastTimeRef = useRef<number>(0)
+  const accumulatedTimeRef = useRef<number>(0)
+  const targetScrollRef = useRef<number>(0)
+  const currentScrollRef = useRef<number>(0)
+  const wakeLockRef = useRef<WakeLockSentinel | null>(null)
   
   const currentChapter = chapters[currentChapterIndex]
   const totalWords = currentChapter ? getWordCount(currentChapter.content) : 0
@@ -95,7 +103,7 @@ function ReaderView() {
         try {
           wakeLockRef.current = await navigator.wakeLock.request('screen')
         } catch (err) {
-          console.log('Wake Lock request failed:', err.message)
+          console.log('Wake Lock request failed:', err instanceof Error ? err.message : 'Unknown error')
         }
       }
     }
@@ -106,7 +114,7 @@ function ReaderView() {
           await wakeLockRef.current.release()
           wakeLockRef.current = null
         } catch (err) {
-          console.log('Wake Lock release failed:', err.message)
+          console.log('Wake Lock release failed:', err instanceof Error ? err.message : 'Unknown error')
         }
       }
     }
@@ -160,7 +168,7 @@ function ReaderView() {
       // Note: readWordIndex state is initialized correctly via useState on mount
       if (contentRef.current && readWordIndex > 0) {
         const words = contentRef.current.querySelectorAll('[data-word-index]')
-        const currentWord = words[readWordIndex]
+        const currentWord = words[readWordIndex] as HTMLElement | undefined
         
         if (currentWord) {
           const container = contentRef.current
@@ -204,7 +212,7 @@ function ReaderView() {
       return
     }
     
-    const animate = (currentTime) => {
+    const animate = (currentTime: number) => {
       if (!lastTimeRef.current) {
         lastTimeRef.current = currentTime
       }
@@ -216,7 +224,7 @@ function ReaderView() {
       // Get current word's punctuation type for pause calculation
       const currentWordInfo = wordsWithPunctuation[readWordIndex]
       const pauseMultiplier = currentWordInfo 
-        ? PAUSE_MULTIPLIERS[currentWordInfo.punctuation] 
+        ? PAUSE_MULTIPLIERS[currentWordInfo.punctuation as PauseType] 
         : 1
       
       // Apply punctuation-based pause
@@ -226,7 +234,7 @@ function ReaderView() {
       if (accumulatedTimeRef.current >= adjustedInterval) {
         accumulatedTimeRef.current = 0
         
-        setReadWordIndex(prev => {
+        setReadWordIndex((prev) => {
           const next = prev + 1
           if (next >= totalWords) {
             return totalWords
@@ -237,7 +245,7 @@ function ReaderView() {
         // Calculate target scroll position for the current word
         if (contentRef.current) {
           const words = contentRef.current.querySelectorAll('[data-word-index]')
-          const currentWord = words[readWordIndex]
+          const currentWord = words[readWordIndex] as HTMLElement | undefined
           
           if (currentWord) {
             const container = contentRef.current
@@ -286,14 +294,14 @@ function ReaderView() {
         cancelAnimationFrame(scrollAnimationRef.current)
       }
     }
-  }, [isPlaying, baseInterval, totalWords, readWordIndex, wordsWithPunctuation])
+  }, [isPlaying, baseInterval, totalWords, readWordIndex, wordsWithPunctuation, PAUSE_MULTIPLIERS, wpm])
   
   // Scroll to the current reading word position
   const scrollToReadingWord = useCallback(() => {
     if (!contentRef.current) return
     
     const words = contentRef.current.querySelectorAll('[data-word-index]')
-    const currentWord = words[readWordIndex]
+    const currentWord = words[readWordIndex] as HTMLElement | undefined
     
     if (currentWord) {
       const container = contentRef.current
@@ -314,13 +322,13 @@ function ReaderView() {
   }, [readWordIndex])
   
   // Handle clicking on a word to set reading position
-  const handleWordClick = useCallback((e) => {
+  const handleWordClick = useCallback((e: MouseEvent<HTMLElement>) => {
     // Only allow clicking to change position when paused
     if (isPlaying) return
     
-    const wordSpan = e.target.closest('[data-word-index]')
+    const wordSpan = (e.target as HTMLElement).closest('[data-word-index]')
     if (wordSpan) {
-      const wordIndex = parseInt(wordSpan.getAttribute('data-word-index'), 10)
+      const wordIndex = parseInt(wordSpan.getAttribute('data-word-index') || '', 10)
       if (!isNaN(wordIndex)) {
         setReadWordIndex(wordIndex)
       }

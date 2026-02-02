@@ -1,12 +1,17 @@
 import ePub from 'epubjs'
-import JSZip from 'jszip'
+import type { Book, Chapter } from '../types'
+
+interface ParseResult {
+  book: Book
+  chapters: Chapter[]
+}
 
 /**
  * Parse an EPUB file and extract chapters
- * @param {File} file - The uploaded file
- * @returns {Promise<{book: object, chapters: Array<{title: string, content: string}>}>}
+ * @param file - The uploaded file
+ * @returns Promise containing book metadata and chapters
  */
-export async function parseEpub(file) {
+export async function parseEpub(file: File): Promise<ParseResult> {
   const arrayBuffer = await file.arrayBuffer()
   const book = ePub(arrayBuffer)
   
@@ -15,21 +20,21 @@ export async function parseEpub(file) {
   const metadata = await book.loaded.metadata
   const navigation = await book.loaded.navigation
   
-  const chapters = []
+  const chapters: Chapter[] = []
   
   // Get spine items (ordered chapter list)
-  const spine = book.spine
+  const spine = book.spine as { items: Array<{ href: string }> }
   
   for (let i = 0; i < spine.items.length; i++) {
     const item = spine.items[i]
     const section = await book.section(item.href)
     
     if (section) {
-      const doc = await section.load(book.load.bind(book))
+      const doc = await section.load(book.load.bind(book)) as Document
       
       // Get the title from TOC or generate one
       let title = `Chapter ${i + 1}`
-      const tocItem = navigation.toc.find(t => t.href.includes(item.href))
+      const tocItem = navigation.toc.find((t: { href: string; label: string }) => t.href.includes(item.href))
       if (tocItem) {
         title = tocItem.label.trim()
       }
@@ -60,18 +65,18 @@ export async function parseEpub(file) {
 /**
  * Parse a custom .epv file format (placeholder implementation)
  * For now, treats it as a plain text file with chapters separated by markers
- * @param {File} file - The uploaded file
- * @returns {Promise<{book: object, chapters: Array<{title: string, content: string}>}>}
+ * @param file - The uploaded file
+ * @returns Promise containing book metadata and chapters
  */
-export async function parseEpv(file) {
+export async function parseEpv(file: File): Promise<ParseResult> {
   const text = await file.text()
   
   // Simple format: chapters separated by "---CHAPTER---" markers
   // Title on first line after marker
   const chapterMarker = /---CHAPTER---\n?/g
-  const parts = text.split(chapterMarker).filter(p => p.trim())
+  const parts = text.split(chapterMarker).filter((p) => p.trim())
   
-  const chapters = parts.map((part, index) => {
+  const chapters: Chapter[] = parts.map((part, index) => {
     const lines = part.trim().split('\n')
     const title = lines[0].startsWith('#') 
       ? lines[0].replace(/^#+\s*/, '') 
@@ -103,10 +108,10 @@ export async function parseEpv(file) {
 
 /**
  * Main parser that detects file type
- * @param {File} file - The uploaded file
+ * @param file - The uploaded file
  */
-export async function parseBook(file) {
-  const extension = file.name.split('.').pop().toLowerCase()
+export async function parseBook(file: File): Promise<ParseResult> {
+  const extension = file.name.split('.').pop()?.toLowerCase()
   
   if (extension === 'epub') {
     return parseEpub(file)
@@ -119,21 +124,21 @@ export async function parseBook(file) {
 
 /**
  * Sanitize HTML content - strip styles, extract text with paragraph structure
- * @param {Document} doc - The HTML document
- * @returns {string} - Cleaned text content with paragraph markers
+ * @param doc - The HTML document
+ * @returns Cleaned text content with paragraph markers
  */
-function sanitizeContent(doc) {
+function sanitizeContent(doc: Document): string {
   // Remove script and style tags
   const scripts = doc.querySelectorAll('script, style, link')
-  scripts.forEach(el => el.remove())
+  scripts.forEach((el) => el.remove())
   
   // Get all paragraphs and text blocks
   const textElements = doc.querySelectorAll('p, h1, h2, h3, h4, h5, h6, div, li')
-  const paragraphs = []
+  const paragraphs: string[] = []
   
-  textElements.forEach(el => {
-    const text = el.textContent.trim()
-    if (text.length > 0) {
+  textElements.forEach((el) => {
+    const text = el.textContent?.trim()
+    if (text && text.length > 0) {
       paragraphs.push(text)
     }
   })
@@ -142,7 +147,7 @@ function sanitizeContent(doc) {
   if (paragraphs.length === 0) {
     const body = doc.querySelector('body')
     if (body) {
-      return body.textContent.trim()
+      return body.textContent?.trim() || ''
     }
   }
   

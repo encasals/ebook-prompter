@@ -1,12 +1,18 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, ReactNode, MouseEvent } from 'react'
 import { Upload, BookOpen, FileText, Sun, Moon, Trash2, Book } from 'lucide-react'
 import { useReaderStore } from '../store/useReaderStore'
 import { parseBook } from '../utils/epubParser'
 
+interface FeatureCardProps {
+  icon: ReactNode
+  title: string
+  description: string
+}
+
 function LibraryView() {
   const [isDragging, setIsDragging] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState(null)
+  const [error, setError] = useState<string | null>(null)
   
   const { 
     setCurrentBook, 
@@ -20,22 +26,22 @@ function LibraryView() {
     removeBookFromLibrary,
   } = useReaderStore()
   
-  const handleDragOver = useCallback((e) => {
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     setIsDragging(true)
   }, [])
   
-  const handleDragLeave = useCallback((e) => {
+  const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     setIsDragging(false)
   }, [])
   
-  const handleDrop = useCallback(async (e) => {
+  const handleDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     setIsDragging(false)
     
     const files = Array.from(e.dataTransfer.files)
-    const bookFile = files.find(f => 
+    const bookFile = files.find((f) => 
       f.name.endsWith('.epub') || f.name.endsWith('.epv')
     )
     
@@ -46,14 +52,14 @@ function LibraryView() {
     }
   }, [])
   
-  const handleFileSelect = useCallback(async (e) => {
-    const file = e.target.files[0]
+  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
     if (file) {
       await loadBook(file)
     }
   }, [])
   
-  const loadBook = async (file) => {
+  const loadBook = async (file: File) => {
     setIsLoading(true)
     setError(null)
     
@@ -67,17 +73,17 @@ function LibraryView() {
       openReader()
     } catch (err) {
       console.error('Error parsing book:', err)
-      setError(`Failed to load book: ${err.message}`)
+      setError(`Failed to load book: ${err instanceof Error ? err.message : 'Unknown error'}`)
     } finally {
       setIsLoading(false)
     }
   }
   
-  const handleOpenSavedBook = (bookId) => {
+  const handleOpenSavedBook = (bookId: string) => {
     loadSavedBook(bookId)
   }
   
-  const handleDeleteBook = (e, bookId) => {
+  const handleDeleteBook = (e: MouseEvent<HTMLButtonElement>, bookId: string) => {
     e.stopPropagation()
     if (confirm('¿Eliminar este libro de la biblioteca?')) {
       removeBookFromLibrary(bookId)
@@ -270,7 +276,7 @@ function LibraryView() {
   )
 }
 
-function FeatureCard({ icon, title, description }) {
+function FeatureCard({ icon, title, description }: FeatureCardProps) {
   return (
     <div className="text-center p-4 sm:p-5 rounded-xl bg-[var(--bg-secondary)]">
       <div className="text-[var(--accent)] mb-3 flex justify-center">

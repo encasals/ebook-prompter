@@ -1,9 +1,15 @@
 import { memo, useMemo } from 'react'
+import type { PauseType, WordInfo } from '../types'
+
+interface WordRendererProps {
+  content: string
+  readWordIndex: number
+}
 
 /**
  * Detect punctuation type at end of word for pause timing
  */
-function getPunctuationType(word) {
+function getPunctuationType(word: string): PauseType {
   const lastChar = word.trim().slice(-1)
   // Long pause: period, exclamation, question mark, ellipsis
   if (['.', '!', '?', '…'].includes(lastChar)) return 'long'
@@ -17,14 +23,14 @@ function getPunctuationType(word) {
 /**
  * Splits text into wrapped word spans for the reading flow engine
  */
-const WordRenderer = memo(function WordRenderer({ content, readWordIndex }) {
+const WordRenderer = memo(function WordRenderer({ content, readWordIndex }: WordRendererProps) {
   const words = useMemo(() => {
     // Split content into paragraphs first
     const paragraphs = content.split(/\n\n+/)
     let globalWordIndex = 0
     
     return paragraphs.map((paragraph, pIndex) => {
-      const paragraphWords = paragraph.split(/\s+/).filter(word => word.length > 0)
+      const paragraphWords = paragraph.split(/\s+/).filter((word) => word.length > 0)
       
       const wordSpans = paragraphWords.map((word, wIndex) => {
         const currentIndex = globalWordIndex
@@ -64,16 +70,16 @@ export default WordRenderer
 /**
  * Get total word count from content
  */
-export function getWordCount(content) {
-  return content.split(/\s+/).filter(word => word.length > 0).length
+export function getWordCount(content: string): number {
+  return content.split(/\s+/).filter((word) => word.length > 0).length
 }
 
 /**
  * Get words array with punctuation info
  */
-export function getWordsWithPunctuation(content) {
-  const words = content.split(/\s+/).filter(word => word.length > 0)
-  return words.map(word => ({
+export function getWordsWithPunctuation(content: string): WordInfo[] {
+  const words = content.split(/\s+/).filter((word) => word.length > 0)
+  return words.map((word) => ({
     word,
     punctuation: getPunctuationType(word)
   }))

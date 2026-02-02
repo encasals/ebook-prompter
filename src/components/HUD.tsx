@@ -10,8 +10,20 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { useReaderStore } from '../store/useReaderStore'
+import type { PauseMultipliers } from '../types'
 
-function HUD({ currentWordIndex, totalWords }) {
+interface HUDProps {
+  currentWordIndex: number
+  totalWords: number
+}
+
+interface PauseSliderProps {
+  label: string
+  value: number
+  onChange: (value: number) => void
+}
+
+function HUD({ currentWordIndex, totalWords }: HUDProps) {
   const [showMobileSettings, setShowMobileSettings] = useState(false)
   const [showPauseSettings, setShowPauseSettings] = useState(false)
   
@@ -331,7 +343,7 @@ function HUD({ currentWordIndex, totalWords }) {
 }
 
 // Pause multiplier slider component
-function PauseSlider({ label, value, onChange }) {
+function PauseSlider({ label, value, onChange }: PauseSliderProps) {
   return (
     <div>
       <div className="flex items-center justify-between mb-1">

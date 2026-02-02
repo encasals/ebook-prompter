@@ -1,7 +1,16 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import type { 
+  ReaderStore, 
+  Book, 
+  Chapter, 
+  CurrentBook, 
+  SavedBook, 
+  PauseMultipliers,
+  ViewType 
+} from '../types'
 
-export const useReaderStore = create(
+export const useReaderStore = create<ReaderStore>()(
   persist(
     (set, get) => ({
       // Playback state
@@ -28,15 +37,15 @@ export const useReaderStore = create(
       theme: 'light',
       
       // View state
-      view: 'library', // 'library' | 'reader'
+      view: 'library',
       
       // Actions
-      setPlaying: (isPlaying) => set({ isPlaying }),
+      setPlaying: (isPlaying: boolean) => set({ isPlaying }),
       togglePlaying: () => set((state) => ({ isPlaying: !state.isPlaying })),
       
-      setWpm: (wpm) => set({ wpm: Math.max(50, Math.min(1000, wpm)) }),
+      setWpm: (wpm: number) => set({ wpm: Math.max(50, Math.min(1000, wpm)) }),
       
-      setPauseMultiplier: (type, value) => set((state) => ({
+      setPauseMultiplier: (type: keyof PauseMultipliers, value: number) => set((state) => ({
         pauseMultipliers: {
           ...state.pauseMultipliers,
           [type]: Math.max(1, Math.min(5, value))
@@ -47,18 +56,18 @@ export const useReaderStore = create(
         pauseMultipliers: { long: 2.0, medium: 1.5, short: 1.2 }
       }),
       
-      setFontSize: (fontSize) => set({ fontSize: Math.max(0.8, Math.min(3, fontSize)) }),
+      setFontSize: (fontSize: number) => set({ fontSize: Math.max(0.8, Math.min(3, fontSize)) }),
       increaseFontSize: () => set((state) => ({ fontSize: Math.min(3, state.fontSize + 0.1) })),
       decreaseFontSize: () => set((state) => ({ fontSize: Math.max(0.8, state.fontSize - 0.1) })),
       
-      setCurrentBook: (book) => set({ currentBook: book, currentChapterIndex: 0 }),
-      setChapters: (chapters) => set({ chapters }),
+      setCurrentBook: (book: Book | CurrentBook) => set({ currentBook: book as CurrentBook, currentChapterIndex: 0 }),
+      setChapters: (chapters: Chapter[]) => set({ chapters }),
       
       // Save book to library
-      saveBookToLibrary: (book, chapters) => {
+      saveBookToLibrary: (book: Book, chapters: Chapter[]) => {
         const { savedBooks } = get()
         const bookId = Date.now().toString()
-        const savedBook = {
+        const savedBook: SavedBook = {
           id: bookId,
           ...book,
           chapters,
@@ -66,7 +75,7 @@ export const useReaderStore = create(
         }
         // Check if book already exists (by title and author)
         const existingIndex = savedBooks.findIndex(
-          b => b.title === book.title && b.author === book.author
+          (b) => b.title === book.title && b.author === book.author
         )
         if (existingIndex >= 0) {
           // Update existing book
@@ -80,13 +89,13 @@ export const useReaderStore = create(
       },
       
       // Load saved book from library
-      loadSavedBook: (bookId) => {
+      loadSavedBook: (bookId: string) => {
         const { savedBooks } = get()
-        const book = savedBooks.find(b => b.id === bookId)
+        const book = savedBooks.find((b) => b.id === bookId)
         if (book) {
           const { chapters, ...bookInfo } = book
           set({ 
-            currentBook: bookInfo,
+            currentBook: bookInfo as CurrentBook,
             chapters,
             currentChapterIndex: book.progressChapterIndex || 0,
             isPlaying: false,
@@ -96,12 +105,12 @@ export const useReaderStore = create(
       },
 
       // Update reading progress
-      updateProgress: (chapterIndex, wordIndex) => {
+      updateProgress: (chapterIndex: number, wordIndex: number) => {
         const { currentBook, savedBooks } = get()
         if (!currentBook || !currentBook.id) return
         
         // Update current book state
-        const updatedBook = { 
+        const updatedBook: CurrentBook = { 
           ...currentBook, 
           progressChapterIndex: chapterIndex, 
           progressWordIndex: wordIndex,
@@ -109,7 +118,7 @@ export const useReaderStore = create(
         }
         
         // Update saved books list
-        const updatedSavedBooks = savedBooks.map(b => 
+        const updatedSavedBooks = savedBooks.map((b) => 
           b.id === currentBook.id 
             ? { ...b, progressChapterIndex: chapterIndex, progressWordIndex: wordIndex, lastRead: new Date().toISOString() }
             : b
@@ -122,12 +131,12 @@ export const useReaderStore = create(
       },
       
       // Remove book from library
-      removeBookFromLibrary: (bookId) => {
+      removeBookFromLibrary: (bookId: string) => {
         const { savedBooks } = get()
-        set({ savedBooks: savedBooks.filter(b => b.id !== bookId) })
+        set({ savedBooks: savedBooks.filter((b) => b.id !== bookId) })
       },
       
-      setCurrentChapterIndex: (index) => {
+      setCurrentChapterIndex: (index: number) => {
         const { chapters } = get()
         if (index >= 0 && index < chapters.length) {
           set({ currentChapterIndex: index, isPlaying: false })
@@ -152,7 +161,7 @@ export const useReaderStore = create(
         theme: state.theme === 'light' ? 'dark' : 'light' 
       })),
       
-      setView: (view) => set({ view }),
+      setView: (view: ViewType) => set({ view }),
       
       openReader: () => set({ view: 'reader' }),
       openLibrary: () => set({ view: 'library', isPlaying: false }),
