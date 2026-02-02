@@ -37,8 +37,8 @@ function HUD({ currentWordIndex, totalWords }) {
   const progress = totalWords > 0 ? Math.round((currentWordIndex / totalWords) * 100) : 0
   const currentChapter = chapters[currentChapterIndex]
   
-  // Preset WPM options
-  const wpmPresets = [100, 150, 200, 250, 300, 400, 500, 600]
+  // Preset WPM options (increments of 20)
+  const wpmPresets = [100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320, 340, 360, 380, 400, 500]
   
   return (
     <>
@@ -63,12 +63,12 @@ function HUD({ currentWordIndex, totalWords }) {
             {/* WPM Control */}
             <div className="mb-6">
               <label className="text-sm text-[var(--text-secondary)] mb-2 block">Reading Speed (WPM)</label>
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-2 overflow-x-auto pb-2 -mx-2 px-2 scrollbar-thin">
                 {wpmPresets.map((preset) => (
                   <button
                     key={preset}
                     onClick={() => setWpm(preset)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex-shrink-0 ${
                       wpm === preset 
                         ? 'bg-[var(--accent)] text-white' 
                         : 'bg-[var(--bg-secondary)] text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
@@ -108,16 +108,12 @@ function HUD({ currentWordIndex, totalWords }) {
             {/* Theme Toggle */}
             <div className="flex items-center justify-between mb-6">
               <span className="text-sm text-[var(--text-secondary)]">Dark Mode</span>
-              <button
-                onClick={toggleTheme}
-                className={`w-14 h-8 rounded-full transition-colors relative ${
-                  theme === 'dark' ? 'bg-[var(--accent)]' : 'bg-[var(--bg-tertiary)]'
-                }`}
-              >
-                <div className={`absolute top-1 w-6 h-6 rounded-full bg-white shadow transition-transform ${
-                  theme === 'dark' ? 'translate-x-7' : 'translate-x-1'
-                }`} />
-              </button>
+              <input
+                type="checkbox"
+                checked={theme === 'dark'}
+                onChange={toggleTheme}
+                className="w-2 h-2 rounded accent-[var(--accent)] cursor-pointer"
+              />
             </div>
             
             {/* Punctuation Pauses */}

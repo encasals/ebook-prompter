@@ -32,6 +32,29 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Thin scrollbar for horizontal scroll areas */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg-tertiary) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  height: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--bg-tertiary);
+  border-radius: 2px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
 html {
   scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
