@@ -13,6 +13,7 @@ function ReaderView() {
     chapters,
     theme,
     pauseMultipliers,
+    updateProgress,
   } = useReaderStore()
   
   // Build pause multipliers with 'none' fallback
@@ -23,7 +24,17 @@ function ReaderView() {
     none: 1
   }), [pauseMultipliers])
   
-  const [readWordIndex, setReadWordIndex] = useState(0)
+  const [readWordIndex, setReadWordIndex] = useState(() => {
+    // Resume from saved position if we're on the saved chapter
+    if (currentBook?.id && currentBook.progressChapterIndex === currentChapterIndex) {
+      return currentBook.progressWordIndex || 0
+    }
+    return 0
+  })
+
+  // Ref to track if chapter changed
+  const prevChapterRef = useRef(currentChapterIndex)
+  
   const contentRef = useRef(null)
   const scrollAnimationRef = useRef(null)
   const lastTimeRef = useRef(0)
@@ -41,6 +52,42 @@ function ReaderView() {
     return getWordsWithPunctuation(currentChapter.content)
   }, [currentChapter])
   
+  // Save progress function
+  const saveProgress = useCallback(() => {
+    if (currentBook?.id) {
+      updateProgress(currentChapterIndex, readWordIndex)
+    }
+  }, [currentBook?.id, currentChapterIndex, readWordIndex, updateProgress])
+
+  // Auto-save mechanisms
+  useEffect(() => {
+    // Save on pause
+    if (!isPlaying) {
+      saveProgress()
+    }
+
+    // Save on window unload/hide
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        saveProgress()
+      }
+    }
+    
+    // Auto-save every 30 seconds
+    const intervalId = setInterval(saveProgress, 30000)
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('beforeunload', saveProgress)
+    
+    return () => {
+      clearInterval(intervalId)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('beforeunload', saveProgress)
+      // Save on unmount
+      saveProgress()
+    }
+  }, [saveProgress, isPlaying])
+
   // Screen Wake Lock - prevent screen from sleeping while playing
   useEffect(() => {
     const requestWakeLock = async () => {
@@ -87,14 +134,63 @@ function ReaderView() {
   
   // Reset reading position when chapter changes
   useEffect(() => {
-    setReadWordIndex(0)
-    accumulatedTimeRef.current = 0
-    targetScrollRef.current = 0
-    currentScrollRef.current = 0
-    if (contentRef.current) {
-      contentRef.current.scrollTop = 0
+    if (prevChapterRef.current !== currentChapterIndex) {
+      setReadWordIndex(0)
+      accumulatedTimeRef.current = 0
+      targetScrollRef.current = 0
+      currentScrollRef.current = 0
+      if (contentRef.current) {
+        contentRef.current.scrollTop = 0
+      }
+      prevChapterRef.current = currentChapterIndex
     }
   }, [currentChapterIndex])
+
+  // Initial scroll to saved position on load/chapter change
+  useEffect(() => {
+    // Only attempt to scroll to a specific word if this is the chapter where we have saved progress
+    const isSavedChapter = currentBook?.id && currentBook.progressChapterIndex === currentChapterIndex
+    
+    // If not the saved chapter, we rely on the reset effect to set scrollTop=0. 
+    // We avoid using stale readWordIndex from previous chapter.
+    if (!isSavedChapter) return
+
+    const scrollToCurrentWord = () => {
+      // Use the stored progress index directly (or currently initialized readWordIndex)
+      // Note: readWordIndex state is initialized correctly via useState on mount
+      if (contentRef.current && readWordIndex > 0) {
+        const words = contentRef.current.querySelectorAll('[data-word-index]')
+        const currentWord = words[readWordIndex]
+        
+        if (currentWord) {
+          const container = contentRef.current
+          const containerRect = container.getBoundingClientRect()
+          const wordRect = currentWord.getBoundingClientRect()
+          
+          // Calculate target scroll position (word at 40% height)
+          // We need absolute position relative to container content, not viewport
+          const scrollTop = container.scrollTop
+          const wordTopRelative = wordRect.top - containerRect.top // position in viewport relative to container
+          const scrollNeeded = wordTopRelative - (containerRect.height * 0.4)
+          
+          const targetPos = scrollTop + scrollNeeded
+          
+          container.scrollTop = targetPos
+          targetScrollRef.current = targetPos
+          currentScrollRef.current = targetPos
+        }
+      }
+    }
+
+    // Attempt scroll immediately and after a short delay to allow for layout/font rendering
+    const timer1 = setTimeout(scrollToCurrentWord, 50)
+    const timer2 = setTimeout(scrollToCurrentWord, 200)
+    
+    return () => {
+      clearTimeout(timer1)
+      clearTimeout(timer2)
+    }
+  }, [currentChapterIndex, currentBook?.id, currentBook?.progressChapterIndex]) // Re-run if relevant book/chapter info changes
   
   // Calculate base interval (ms per word) based on WPM
   const baseInterval = 60000 / wpm // milliseconds per word
@@ -192,24 +288,51 @@ function ReaderView() {
     }
   }, [isPlaying, baseInterval, totalWords, readWordIndex, wordsWithPunctuation])
   
-  // Handle manual scroll
-  const handleScroll = useCallback(() => {
-    if (!contentRef.current || isPlaying) return
+  // Scroll to the current reading word position
+  const scrollToReadingWord = useCallback(() => {
+    if (!contentRef.current) return
     
-    const container = contentRef.current
-    const containerRect = container.getBoundingClientRect()
-    const readingLineY = containerRect.top + containerRect.height * 0.4
+    const words = contentRef.current.querySelectorAll('[data-word-index]')
+    const currentWord = words[readWordIndex]
     
-    const words = container.querySelectorAll('[data-word-index]')
+    if (currentWord) {
+      const container = contentRef.current
+      const containerRect = container.getBoundingClientRect()
+      const wordRect = currentWord.getBoundingClientRect()
+      
+      // Calculate target scroll position (word at 40% height)
+      const scrollTop = container.scrollTop
+      const wordTopRelative = wordRect.top - containerRect.top
+      const scrollNeeded = wordTopRelative - (containerRect.height * 0.4)
+      
+      const targetPos = scrollTop + scrollNeeded
+      
+      container.scrollTop = targetPos
+      targetScrollRef.current = targetPos
+      currentScrollRef.current = targetPos
+    }
+  }, [readWordIndex])
+  
+  // Handle clicking on a word to set reading position
+  const handleWordClick = useCallback((e) => {
+    // Only allow clicking to change position when paused
+    if (isPlaying) return
     
-    for (let i = 0; i < words.length; i++) {
-      const wordRect = words[i].getBoundingClientRect()
-      if (wordRect.top > readingLineY) {
-        setReadWordIndex(Math.max(0, i - 1))
-        break
+    const wordSpan = e.target.closest('[data-word-index]')
+    if (wordSpan) {
+      const wordIndex = parseInt(wordSpan.getAttribute('data-word-index'), 10)
+      if (!isNaN(wordIndex)) {
+        setReadWordIndex(wordIndex)
       }
     }
   }, [isPlaying])
+  
+  // Scroll to reading position when play is pressed
+  useEffect(() => {
+    if (isPlaying) {
+      scrollToReadingWord()
+    }
+  }, [isPlaying, scrollToReadingWord])
   
   const currentDate = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -253,8 +376,8 @@ function ReaderView() {
       {/* Main Content */}
       <main 
         ref={contentRef}
-        onScroll={handleScroll}
-        className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-32 sm:pb-40 overflow-y-auto"
+        onClick={handleWordClick}
+        className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-32 sm:pb-40 overflow-y-auto cursor-text"
         style={{ 
           height: 'calc(100dvh - 52px)',
           fontSize: `${fontSize}rem`,

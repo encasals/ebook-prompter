@@ -38,7 +38,7 @@ const WordRenderer = memo(function WordRenderer({ content, readWordIndex }) {
             key={`word-${pIndex}-${wIndex}`}
             data-word-index={currentIndex}
             data-punctuation={punctuation}
-            className={isRead ? 'word-read' : 'word-unread'}
+            className={`${isRead ? 'word-read' : 'word-unread'} cursor-pointer hover:bg-[var(--bg-secondary)] rounded transition-colors`}
           >
             {word}{' '}
           </span>

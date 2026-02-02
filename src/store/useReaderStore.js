@@ -88,11 +88,37 @@ export const useReaderStore = create(
           set({ 
             currentBook: bookInfo,
             chapters,
-            currentChapterIndex: 0,
+            currentChapterIndex: book.progressChapterIndex || 0,
             isPlaying: false,
             view: 'reader'
           })
         }
+      },
+
+      // Update reading progress
+      updateProgress: (chapterIndex, wordIndex) => {
+        const { currentBook, savedBooks } = get()
+        if (!currentBook || !currentBook.id) return
+        
+        // Update current book state
+        const updatedBook = { 
+          ...currentBook, 
+          progressChapterIndex: chapterIndex, 
+          progressWordIndex: wordIndex,
+          lastRead: new Date().toISOString()
+        }
+        
+        // Update saved books list
+        const updatedSavedBooks = savedBooks.map(b => 
+          b.id === currentBook.id 
+            ? { ...b, progressChapterIndex: chapterIndex, progressWordIndex: wordIndex, lastRead: new Date().toISOString() }
+            : b
+        )
+        
+        set({ 
+          currentBook: updatedBook,
+          savedBooks: updatedSavedBooks 
+        })
       },
       
       // Remove book from library
