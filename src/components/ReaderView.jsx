@@ -28,6 +28,8 @@ function ReaderView() {
   const scrollAnimationRef = useRef(null)
   const lastTimeRef = useRef(0)
   const accumulatedTimeRef = useRef(0)
+  const targetScrollRef = useRef(0)
+  const currentScrollRef = useRef(0)
   
   const currentChapter = chapters[currentChapterIndex]
   const totalWords = currentChapter ? getWordCount(currentChapter.content) : 0
@@ -42,6 +44,8 @@ function ReaderView() {
   useEffect(() => {
     setReadWordIndex(0)
     accumulatedTimeRef.current = 0
+    targetScrollRef.current = 0
+    currentScrollRef.current = 0
     if (contentRef.current) {
       contentRef.current.scrollTop = 0
     }
@@ -89,7 +93,7 @@ function ReaderView() {
           return next
         })
         
-        // Auto-scroll to keep reading line in view
+        // Calculate target scroll position for the current word
         if (contentRef.current) {
           const words = contentRef.current.querySelectorAll('[data-word-index]')
           const currentWord = words[readWordIndex]
@@ -102,12 +106,32 @@ function ReaderView() {
             // Calculate reading line position (40% from top)
             const readingLineY = containerRect.top + containerRect.height * 0.4
             
-            // If word is below reading line, scroll
-            if (wordRect.top > readingLineY) {
-              const scrollAmount = wordRect.top - readingLineY
-              container.scrollTop += scrollAmount * 0.1
+            // Update target scroll if word is below reading line
+            if (wordRect.top > readingLineY + 5) {
+              const scrollNeeded = wordRect.top - readingLineY
+              targetScrollRef.current = container.scrollTop + scrollNeeded
             }
           }
+        }
+      }
+      
+      // Smooth scroll interpolation - runs every frame regardless of word timing
+      if (contentRef.current) {
+        const container = contentRef.current
+        currentScrollRef.current = container.scrollTop
+        
+        // Calculate distance to target
+        const distance = targetScrollRef.current - currentScrollRef.current
+        
+        // Only scroll if there's meaningful distance
+        if (Math.abs(distance) > 0.5) {
+          // Smooth easing factor - higher WPM needs faster scroll
+          // Base factor of 0.08, scales up slightly with speed
+          const easeFactor = Math.min(0.15, 0.06 + (wpm / 5000))
+          const scrollStep = distance * easeFactor
+          
+          // Apply smooth scroll
+          container.scrollTop += scrollStep
         }
       }
       
