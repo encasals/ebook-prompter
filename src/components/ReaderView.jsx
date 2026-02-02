@@ -377,7 +377,7 @@ function ReaderView() {
       <main 
         ref={contentRef}
         onClick={handleWordClick}
-        className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-32 sm:pb-40 overflow-y-auto cursor-text scroll-smooth"
+        className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-32 sm:pb-40 overflow-y-auto cursor-text"
         style={{ 
           height: 'calc(100dvh - 52px)',
           fontSize: `${fontSize}rem`,
