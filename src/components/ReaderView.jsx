@@ -30,6 +30,7 @@ function ReaderView() {
   const accumulatedTimeRef = useRef(0)
   const targetScrollRef = useRef(0)
   const currentScrollRef = useRef(0)
+  const wakeLockRef = useRef(null)
   
   const currentChapter = chapters[currentChapterIndex]
   const totalWords = currentChapter ? getWordCount(currentChapter.content) : 0
@@ -39,6 +40,50 @@ function ReaderView() {
     if (!currentChapter) return []
     return getWordsWithPunctuation(currentChapter.content)
   }, [currentChapter])
+  
+  // Screen Wake Lock - prevent screen from sleeping while playing
+  useEffect(() => {
+    const requestWakeLock = async () => {
+      if ('wakeLock' in navigator && isPlaying) {
+        try {
+          wakeLockRef.current = await navigator.wakeLock.request('screen')
+        } catch (err) {
+          console.log('Wake Lock request failed:', err.message)
+        }
+      }
+    }
+    
+    const releaseWakeLock = async () => {
+      if (wakeLockRef.current) {
+        try {
+          await wakeLockRef.current.release()
+          wakeLockRef.current = null
+        } catch (err) {
+          console.log('Wake Lock release failed:', err.message)
+        }
+      }
+    }
+    
+    if (isPlaying) {
+      requestWakeLock()
+    } else {
+      releaseWakeLock()
+    }
+    
+    // Re-acquire wake lock when page becomes visible again
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isPlaying) {
+        requestWakeLock()
+      }
+    }
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    
+    return () => {
+      releaseWakeLock()
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [isPlaying])
   
   // Reset reading position when chapter changes
   useEffect(() => {
